@@ -28,9 +28,8 @@ const TEXT = 8;
 const NUMBER = 9;
 const FRACTION = 10;
 const SCRIPTED = 11;
+const ROOT = 12;
 // TODO: VINCULUM
-// TODO: SQRT
-// TODO: ROOT
 // TODO: OVERBRACE
 // TODO: UNDERBRACE
 
@@ -855,6 +854,7 @@ function visitNodes(p, visitor) {
 function doLayout(p) {
 	visitNodes(p, layoutSubscripts);
 	visitNodes(p, layoutExponents);
+	visitNodes(p, layoutRoots);
 	visitNodes(p, layoutFractions);
 }
 
@@ -952,6 +952,51 @@ function layoutExponents(p) {
 			} else {
 				--i;
 			}
+		}
+	}
+}
+
+function writeRoot(nesting) {
+	let result;
+
+	if (this.index) {
+		result = pad("<mroot>", nesting) +
+			this.radicand.write(nesting + 1) +
+			this.index.write(nesting + 1) +
+			pad("</mroot>", nesting);
+	} else {
+		result = pad("<msqrt>", nesting) +
+			this.radicand.write(nesting + 1) +
+			pad("</msqrt>", nesting);
+	}
+	return result;
+}
+
+function layoutRoots(p) {
+	if ((p.type == CLUSTER || p.type == ROW) && p.elements.length >= 2) {
+		let i = p.elements.length - 2;
+		while (i >= 0) {
+			if (i + 1 < p.elements.length && p.elements[i].type == OPERATOR &&
+					p.elements[i].operator == "&radic;")
+			{
+				let radical = {"type": ROOT, "radicand": null, "index": null,
+					"write": writeRoot, "children": function(){return [this.radicand, this.index]} };
+
+				if (i + 2 == p.elements.length) {
+					radical.radicand = p.elements[i + 1];
+				} else {
+					radical.radicand = {"type": CLUSTER, "elements": p.elements.slice(i + 1),
+						"write": writeRow,
+						"children": function(){return this.elements} };
+				}
+
+				if (radical.radicand.type == BRACKETED) {
+					radical.radicand = radical.radicand.contents;
+				}
+
+				p.elements.splice(i, p.elements.length - i, radical);
+			}
+			--i;
 		}
 	}
 }
