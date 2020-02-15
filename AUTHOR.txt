@@ -1,0 +1,17 @@
+The author of this work is Ted Clancy (ted.clancy@gmail.com).
+
+This work is hosted at: https://github.com/cyberbolts/MightyMathMarkdown
+
+You are granted a license to use this work under the terms of the Mozilla Public License 2.0. See LICENSE.txt for license terms.
+
+If you enjoy using this work, you can thank the author by making a donation to the Canadian Red Cross.
+
+-----
+
+L'Auteur de cet oeuvre est Ted Clancy (ted.clancy@gmail.com).
+
+Cette oeuvre est située à: http://github.com/cyberbolts/MightyMathMarkdown
+
+L'Auteur vous permet à utiliser cette oeuvre sous les termes du Mozilla Public License 2.0. Voyez LICENSE.txt pour les termes.
+
+Si vous enjoyez cette oeuvre, vous pouvez remercier l'auteur en faissant un don à la Croix-Rouge canadienne.
