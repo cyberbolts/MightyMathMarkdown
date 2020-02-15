@@ -1,4 +1,4 @@
-const debugMode = true;
+const debugMode = false;
 
 const INLINE_STYLE = 0;
 const DISPLAY_STYLE = 1;
