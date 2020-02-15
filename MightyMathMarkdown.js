@@ -7,14 +7,8 @@ function toMathML(s, isDisplayStyle) {
 	s = s.replace(/\n/g, " ").replace(/\t/g, "  ");
 	console.log(s);
 
-	let tree = parse(s);	
-	// createSubscripts(tree);
-	// createSuperscripts(tree);
-	// createSqrt(tree);
-	// createRoot(tree);
-	// createRangeOps(tree);
-	// createFrac(tree);
-	// TODO: Remove round brackets inside vertical bar brackets.
+	let tree = parse(s);
+	doLayout(tree);
 	let result = write(tree, isDisplayStyle);
 
 	console.log(result);
@@ -31,12 +25,12 @@ const BRACKETED = 5;
 const IDENTIFIER = 6;
 const OPERATOR = 7;
 const TEXT = 8;
-const NUMBER= 9;
+const NUMBER = 9;
+const FRACTION = 10;
+const SCRIPTED = 11;
 // TODO: VINCULUM
 // TODO: SQRT
 // TODO: ROOT
-// TODO: FRAC
-// TODO: SCRIPTED
 // TODO: OVERBRACE
 // TODO: UNDERBRACE
 
@@ -94,7 +88,8 @@ function writeGrid(nesting)
 }
 
 function parseGrid(p) {
-	let result = {"type": GRID, "gridrows": [], "write": writeGrid};
+	let result = {"type": GRID, "gridrows": [], "write": writeGrid,
+			"children": function(){return this.gridrows} };
 
 	while(p.i < p.s.length) {
 		if (matchString(p, ';')) {
@@ -130,7 +125,8 @@ function writeGridRow(nesting)
 }
 
 function parseGridRow(p) {
-	let result = {"type": GRIDROW, "cells": [], "write": writeGridRow};
+	let result = {"type": GRIDROW, "cells": [], "write": writeGridRow,
+			"children": function(){return this.cells} };
 
 	while (p.i < p.s.length) {
 		if (matchString(p, "  ")) {  // Two spaces
@@ -170,7 +166,8 @@ function writeCell(nesting)
 }
 
 function parseCell(p) {
-	let result = {"type": CELL, "row": parseRow(p), "write": writeCell};
+	let result = {"type": CELL, "row": parseRow(p), "write": writeCell,
+			"children": function(){return [this.row]} };
 
 	if (!result.row) {
 		return "";
@@ -193,7 +190,8 @@ function writeRow(nesting)
 }
 
 function parseRow(p) {
-	let result = {"type": ROW, "elements": [], "write": writeRow};
+	let result = {"type": ROW, "elements": [], "write": writeRow,
+			"children": function(){return this.elements} };
 
 	while (p.i < p.s.length) {
 		if (p.s[p.i] == ' ' && (p.i + 1 == p.s.length || p.s[p.i + 1] != ' ')) {
@@ -220,7 +218,8 @@ function parseRow(p) {
 }
 
 function parseCluster(p) {
-	let result = {"type": CLUSTER, "elements": [], "write": writeRow};
+	let result = {"type": CLUSTER, "elements": [], "write": writeRow,
+		"children": function(){return this.elements} };
 
 	while (p.i < p.s.length) {
 		let expr;
@@ -287,7 +286,8 @@ function writeBracketed(nesting) {
 }
 
 function parseBracketed(p) {
-	let result = {"type": BRACKETED, "left": "", "right": "", "contents": null, "write" : writeBracketed};
+	let result = {"type": BRACKETED, "left": "", "right": "", "contents": null, "write" : writeBracketed,
+			"children": function(){return [this.left, this.contents, this.right]} };
 
 	let left = "";
 
@@ -838,6 +838,193 @@ function write(p, isDisplayStyle) {
 	result += pad("</math>");
 
 	return result;
+}
+
+function visitNodes(p, visitor) {
+	visitor(p);
+	if (p.children) {
+		let children = p.children();
+		for (child of children) {
+			if (child) {
+				visitNodes(child, visitor);
+			}
+		}
+	}
+}
+
+function doLayout(p) {
+	visitNodes(p, layoutSubscripts);
+	visitNodes(p, layoutExponents);
+	visitNodes(p, layoutFractions);
+}
+
+function writeScripted(nesting) {
+	if (this.base && this.subscript && this.superscript) {
+		return pad("<msubsup>", nesting) +
+			this.base.write(nesting + 1) +
+			this.subscript.write(nesting + 1) +
+			this.superscript.write(nesting + 1) +
+			pad("</msubsup>", nesting);
+	} else if (this.base && this.superscript) {
+		return pad("<msup>", nesting) +
+			this.base.write(nesting + 1) +
+			this.superscript.write(nesting + 1) +
+			pad("</msup>", nesting);
+	} else if (this.base && this.subscript) {
+		return pad("<msub>", nesting) +
+			this.base.write(nesting + 1) +
+			this.subscript.write(nesting + 1) +
+			pad("</msub>", nesting);
+	}
+	return this.base.write(nesting);
+}
+
+function layoutSubscripts(p) {
+	// The _ operator
+	if ((p.type == CLUSTER) && p.elements.length >= 3) {
+		let i = p.elements.length - 3;
+		while (i >= 0) {
+			if (i + 2 < p.elements.length && p.elements[i + 1].type == OPERATOR &&
+					p.elements[i + 1].operator == "_")
+			{
+				let base = p.elements[i];
+				let subscript = p.elements[i + 2];
+
+				if (subscript.type == BRACKETED) {
+					subscript = subscript.contents;
+				}
+
+				let scripted = {"type": SCRIPTED, "base": base, "subscript": subscript,
+						"write": writeScripted,
+						"children" : function(){return [this.base, this.subscript, this.superscript]} };
+
+				p.elements.splice(i, 3, scripted);
+			} else {
+				--i;
+			}
+		}
+	}
+
+	if ((p.type == CLUSTER) && p.elements.length >= 2) {
+		let i = p.elements.length - 2;
+		while (i >= 0) {
+			if (i + 1 < p.elements.length && p.elements[i].type == IDENTIFIER &&
+					p.elements[i + 1].type == NUMBER)
+			{
+				let base = p.elements[i];
+				let subscript = p.elements[i + 1];
+
+				let scripted = {"type": SCRIPTED, "base": base, "subscript": subscript,
+						"write": writeScripted,
+						"children" : function(){return [this.base, this.subscript, this.superscript]} };
+
+				p.elements.splice(i, 2, scripted);
+			} else {
+				--i;
+			}
+		}
+	}
+}
+
+function layoutExponents(p) {
+	if ((p.type == CLUSTER) && p.elements.length >= 3) {
+		let i = p.elements.length - 3;
+		while (i >= 0) {
+			if (i + 2 < p.elements.length && p.elements[i + 1].type == OPERATOR &&
+					p.elements[i + 1].operator == "^")
+			{
+				let base = p.elements[i];
+				let superscript = p.elements[i + 2];
+
+				if (superscript.type == BRACKETED) {
+					superscript = superscript.contents;
+				}
+
+				if (base.type == SCRIPTED && !base.superscript) {
+					base.superscript = superscript;
+					p.elements.splice(i + 1, 2);
+				} else {
+					let scripted = {"type": SCRIPTED, "base": base, "superscript": superscript,
+						"write": writeScripted,
+						"children" : function(){return [this.base, this.subscript, this.superscript]} };
+					p.elements.splice(i, 3, scripted);
+				}
+			} else {
+				--i;
+			}
+		}
+	}
+}
+
+function writeFraction(nesting) {
+	return pad("<mfrac>", nesting) +
+		this.numerator.write(nesting + 1) +
+		this.denominator.write(nesting + 1) +
+		pad("</mfrac>", nesting);
+}
+
+function layoutFractions(p) {
+	if (p.type == CLUSTER && p.elements.length >= 3) {
+		let i = 1;
+		while (i + 1 < p.elements.length) {
+			if (p.elements[i].type == OPERATOR && p.elements[i].operator == "/") {
+				let frac = {"type": FRACTION, "numerator": null, denominator: null,
+						"write": writeFraction,
+						"children" : function(){return [this.numerator, this.denominator]} };
+
+
+				if (i == 1) {
+					frac.numerator = p.elements[0];
+				} else {
+					frac.numerator = {"type": CLUSTER, "elements": p.elements.slice(0, i),
+						"write": writeRow,
+						"children": function(){return this.elements} };
+				}
+
+				if (i + 2 == p.elements.length) {
+					frac.denominator = p.elements[i + 1];
+				} else {
+					frac.denominator = {"type": CLUSTER, "elements": p.elements.slice(i + 1),
+						"write": writeRow,
+						"children": function(){return this.elements} };
+				}
+
+				if (frac.numerator.type == BRACKETED) {
+					frac.numerator = frac.numerator.contents;
+				}
+				if (frac.denominator.type == BRACKETED) {
+					frac.denominator = frac.denominator.contents;
+				}
+
+				p.elements.splice(0, p.elements.length, frac);
+				break;
+			} else {
+				++i;
+			}
+		}
+	} else if (p.type == ROW && p.elements.length >= 3) {
+		let i = 0;
+		while (i + 2 < p.elements.length) {
+			if (p.elements[i + 1].type == OPERATOR && p.elements[i + 1].operator == "/") {
+				let frac = {"type": FRACTION, "numerator": null, denominator: null,
+						"write": writeFraction,
+						"children" : function(){return [this.numerator, this.denominator]} };
+				frac.numerator = p.elements[i];
+				frac.denominator = p.elements[i + 2];
+
+				if (frac.numerator.type == BRACKETED) {
+					frac.numerator = frac.numerator.contents;
+				}
+				if (frac.denominator.type == BRACKETED) {
+					frac.denominator = frac.denominator.contents;
+				}
+
+				p.elements.splice(i, 3, frac);
+			} else {
+				++i;
+			}
+		}
+	}
 }
 
 function MightyMathMarkdown() {
