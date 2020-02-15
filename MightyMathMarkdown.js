@@ -396,7 +396,9 @@ function parseNumber(p) {
 
 function writeText(nesting)
 {
-	return pad("<mtext>&nbsp;&nbsp;" + this.text + "&nbsp;&nbsp;</mtext>", nesting);
+	let text = this.text;
+	text = text.replace(/\\u/g, "&micro;");
+	return pad("<mtext>&thinsp;" + text + "&nbsp;</mtext>", nesting);
 }
 
 function parseText(p) {
@@ -501,9 +503,6 @@ const identifierDictionary = {
 	"\\sigma" : "&sigmaf;",
 	"\\upsilon" : "&upsih;",
 
-	"\\u" : "&micro;",
-	"µ" : "&micro;",   // Some European keyboards have this as a key
-
 	"\\p" : "&weierp;",
 
 	// Non HTML 4.0
@@ -536,6 +535,8 @@ const operatorDictionary = {
 	"\\P" : "P",
 	"\\C" : "C",
 	"\\F" : "F",  // Hyper-geometric function
+
+	"\\d" : "&dd;",  // Differential d
 
 	// HTML 4.0 entities
 	"X" : "&times;",  // cross-product
@@ -638,12 +639,6 @@ const operatorDictionary = {
 	"<==" : "&lArr;",
 	"<=>" : "&hArr;",
 
-	"\\d" : "d",   // An upright 'd' for differentials.
-	               // MathML defines a codepoint for this (&DifferentialD;), which is
-                       // a good idea for semantic interpretation, but MathML specifies it
-                       // should be rendered as a double-struck 'd'. I don't know anyone who
-	               // wants it to look that way.
-
 	// Not in HTML 4.0
 	"o" : "&compfn;",
 
@@ -743,6 +738,12 @@ function parseIdentifier(p) {
 }
 
 function writeOperator(nesting) {
+	if (this.operator == "&dd;") {
+		// The MathML standard says this should look like a double-struck d.
+		// I don't know anyone who wants it to look like that.
+		return pad("<mspace width=thinmathspace /><mi>d</mi>", nesting);
+	}
+
 	return pad("<mo>" + this.operator + "</mo>", nesting);
 }
 
