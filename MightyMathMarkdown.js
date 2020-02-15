@@ -409,7 +409,7 @@ function parseText(p) {
 	if (matchString(p, "\"")) {
 		let result = {"type": TEXT, "text": "", "write" : writeText};
 
-		while (!matchString(p, "\"")) {
+		while (p.i < p.s.length && !matchString(p, "\"")) {
 			result.text += p.s[p.i];
 			++p.i;
 		}
@@ -681,7 +681,7 @@ function parseQuotedIdentifier(p) {
 	if (matchString(p, "\'")) {
 		let result = {"type": IDENTIFIER, "identifier": "", "write" : writeIdentifier};
 
-		while(!matchString(p, "\'")) {
+		while(p.i < p.s.length && !matchString(p, "\'")) {
 			result.identifier += p.s[p.i];
 			++p.i;
 		}
