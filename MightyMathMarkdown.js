@@ -240,23 +240,23 @@ function parseCluster(p) {
 					p.expectTerm = false;
 				} else if (expr = parseOperator(p)) {
 					result.elements.push(expr);
-					p.expectTerm = true;
+					p.expectTerm = !isPostfix(expr.operator);
 				} else if (expr = parseUnrecognized(p)) {
 					result.elements.push(expr);
-					p.expectTerm = (expr.type == OPERATOR);
+					p.expectTerm = (expr.type == OPERATOR && !isPostfix(expr.operator));
 				} else {
 					break;
 				}
 			} else {
 				if (expr = parseOperator(p)) {
 					result.elements.push(expr);
-					p.expectTerm = true;
+					p.expectTerm = !isPostfix(expr.operator);
 				} else if (expr = parseIdentifier(p)) {
 					result.elements.push(expr);
 					p.expectTerm = false;
 				} else if (expr = parseUnrecognized(p)) {
 					result.elements.push(expr);
-					p.expectTerm = (expr.type == OPERATOR);
+					p.expectTerm = (expr.type == OPERATOR && !isPostfix(expr.operator));
 				} else {
 					break;
 				}
@@ -558,6 +558,10 @@ const alphaOperators = {
 	"o" : "&compfn;"
 };
 
+function isPostfix(op) {
+	return op == "%" || op == "&prime;" || op == "&hellip;";
+}
+
 const nonAlphaOperators = {
 	// Operators which need special handling
 	"_" : "_",      // Suscripting
@@ -575,19 +579,19 @@ const nonAlphaOperators = {
 	"\\F" : "F",  // Hyper-geometric function
 
 	// HTML 4.0 operators
+	"\'" : "&prime;",
+	"%" : "%",
+
 	"..." : "&hellip;",
 
 	"\\A:" : "&forall;",
 	"\\E:" : "&exist;",
 
-	"%" : "%",
 	"\\:" : ":",   // Allow an escaped literal colon
 	"\\;" : ";",   // Allow an escaped literal semicolon
 
 	"-" : "&minus;",
 	"+/-" : "&plusmn;",
-	"\'" : "&prime;",
-	// "\'\'" : "&Prime;",
 
 	"@" : "&part;",
 
