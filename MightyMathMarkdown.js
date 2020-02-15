@@ -419,13 +419,6 @@ function parseText(p) {
 }
 
 const alphaIdentifiers = {
-	// Ambiguous with operators
-	"x" : "x",
-	"X" : "X",
-	"o" : "o",
-	"v" : "v",
-	"V" : "V",
-
 	"null" : "&empty;",
 	"empty" : "&empty;",
 
@@ -505,6 +498,12 @@ const nonAlphaIdentifiers = {
 
 	"\\p" : "&weierp;",
 
+	// When a letter can be an operator, prefixing it with backslash makes it an identifier again.
+	"\\X" : "X",
+	"\\v" : "v",
+	"\\V" : "V",
+	"\\o" : "o",
+
 	// Non HTML 4.0
 	"\\phi": "&phiv;",
 };
@@ -519,8 +518,8 @@ const alphaOperators = {
 	"det" : "det",
 
 	// HTML 4.0 entities
-	"x" : "&times;",
-	"X" : "&times;",
+	"X" : "&times;",  // cross-product
+	"cross" : "&times;",  // cross-product
 
 	"sqrt": "&radic;",
 	"root": "&radic;",
@@ -543,6 +542,8 @@ const alphaOperators = {
 
 	"prop" : "&prop;",
 
+	"and" : "&and;",
+	"or" : "&or;",
 	"v" : "&or;",
 	"V" : "&or;",
 
@@ -568,8 +569,8 @@ const nonAlphaOperators = {
 	"^" : "^",      // Superscripting. Can also represent &and;
 	"/" : "/",      // Fractions
 	"." : "&sdot;", // Invisible multiplication. Can also represent &sdot;
+	"\\." : "&sdot;", // Invisible multiplication. Can also represent &sdot;
 	"!" : "!",      // Factorial. Can also represent &not;
-	"*" : "&times;",// Multiplication. Can also represent &lowast;
 	":" : "&af;",   // An invisible operator. Can also represent spaced colon.
 	".." : "..",    // Special syntax for ranges.
 	
@@ -579,10 +580,12 @@ const nonAlphaOperators = {
 	"\\F" : "F",  // Hyper-geometric function
 
 	// HTML 4.0 operators
+	"\\\'" : "&prime;",
 	"\'" : "&prime;",
 	"%" : "%",
 
 	"..." : "&hellip;",
+	"\\..." : "&hellip;",
 
 	"\\A:" : "&forall;",
 	"\\E:" : "&exist;",
@@ -592,6 +595,7 @@ const nonAlphaOperators = {
 
 	"-" : "&minus;",
 	"+/-" : "&plusmn;",
+	"*" : "&lowast;",
 
 	"@" : "&part;",
 
@@ -628,7 +632,7 @@ const nonAlphaOperators = {
 
 	"_|_" : "&perp;",
 
-	"(*)" : "&otimes;",
+	"(X)" : "&otimes;",
 	"(+)" : "&oplus;",
 
 	"->" : "&rarr;",  // This one has a shortform
@@ -708,7 +712,11 @@ function parseAlphaIdentifier(p) {
 
 		let s = p.s.substring(p.i, end);
 
-		if (s in alphaIdentifiers) {
+		if (s.length == 1) {
+			result.identifier = s;
+			p.i = end;
+			return result;
+		} else if (s in alphaIdentifiers) {
 			result.identifier = alphaIdentifiers[s];
 			p.i = end;
 			return result;
