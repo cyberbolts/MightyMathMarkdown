@@ -72,7 +72,7 @@ function pad(s, nesting) {
 	}
 	return s;
 }
- 
+
 function writeGrid(nesting)
 {
 	let result = "";
@@ -471,7 +471,7 @@ const identifierDictionary = {
 	"Chi" : "&Chi;",
 	"Psi" : "&Psi;",
 	"Omega" : "&Omega;",
-	
+
 	"alpha" : "&alpha;",
 	"beta" : "&beta;",
 	"gamma" : "&gamma;",
@@ -569,7 +569,7 @@ const operatorDictionary = {
 
 	"cup" : "&cup;",
 	"cap" : "&cap;",
-	
+
 	"ang" : "&ang;",
 
 	"therefore" : "&there4;",
@@ -606,7 +606,7 @@ const operatorDictionary = {
 	"¬==" : "&ne;",
 
 	"===" : "&equiv;",
-	
+
 	"~" : "&sim;",
 	"~~" : "&asymp;",
 	"~==" : "&cong;",
@@ -615,8 +615,8 @@ const operatorDictionary = {
 	">" : "&gt;",
 	"<=" : "&le;",
 	">=" : "&ge;",
-	
-	":<:" : "&sub;",  // Subset // TODO: Not a subset
+
+	":<:" : "&sub;",  // Subset
 	":>:" : "&sup;",  // Superset
 	":<=:" : "&sube;",
 	":>=:" : "&supe;",
