@@ -418,7 +418,17 @@ function parseText(p) {
 	return "";
 }
 
-const alphaIdentifiers = {
+// Note: Because of how matching works, only two kinds of keys are allowed:
+// * Those that start with a non-alphabetic character
+// * Those that are entirely alphabetic.
+const identifierDictionary = {
+	// When a letter can be an operator, prefixing it with backslash makes it an identifier again.
+	"\\X" : "X",
+	"\\v" : "v",
+	"\\V" : "V",
+	"\\o" : "o",
+
+	// HTML 4.0 entities
 	"null" : "&empty;",
 	"empty" : "&empty;",
 
@@ -485,37 +495,47 @@ const alphaIdentifiers = {
 	"chi" : "&chi;",
 	"psi" : "&psi;",
 	"omega" : "&omega;",
-};
-
-const nonAlphaIdentifiers = {
-	"\\u" : "&micro;",
-	"µ" : "&micro;",   // Some European keyboards have this as a key
 
 	"\\theta" : "&thetasym;",
 	"\\pi" : "&piv;",
 	"\\sigma" : "&sigmaf;",
 	"\\upsilon" : "&upsih;",
 
-	"\\p" : "&weierp;",
+	"\\u" : "&micro;",
+	"µ" : "&micro;",   // Some European keyboards have this as a key
 
-	// When a letter can be an operator, prefixing it with backslash makes it an identifier again.
-	"\\X" : "X",
-	"\\v" : "v",
-	"\\V" : "V",
-	"\\o" : "o",
+	"\\p" : "&weierp;",
 
 	// Non HTML 4.0
 	"\\phi": "&phiv;",
 };
 
-const maxNonAlphaIdentifierKeyLength = 8;
+const maxIdentifierKeyLength = 8;  // Actually only matters for the keys that start with a non-letter.
 
-const alphaOperators = {
+// Note: Because of how matching works, only two kinds of keys are allowed:
+// * Those that start with a non-alphabetic character
+// * Those that are entirely alphabetic.
+const operatorDictionary = {
+	// Operators which need special handling
+	"_" : "_",      // Suscripting
+	"^" : "^",      // Superscripting. Can also represent &and;
+	"/" : "/",      // Fractions
+	"." : "&sdot;", // Invisible multiplication. Can also represent &sdot;
+	"\\." : "&sdot;", // Invisible multiplication. Can also represent &sdot;
+	"!" : "!",      // Factorial. Can also represent &not;
+	":" : "&af;",   // An invisible operator. Can also represent spaced colon.
+	".." : "..",    // Special syntax for ranges.
+
 	// These operators are ASCII text strings. Are there any other ASCII words
 	// that should be treated as operators?
 	// TODO: Treat ASCII strings at operators if enclosed in a pair of colons. :operator:
 	"lim" : "lim",
 	"det" : "det",
+
+	// These letter-like operators have special formatting
+	"\\P" : "P",
+	"\\C" : "C",
+	"\\F" : "F",  // Hyper-geometric function
 
 	// HTML 4.0 entities
 	"X" : "&times;",  // cross-product
@@ -551,35 +571,9 @@ const alphaOperators = {
 	"cap" : "&cap;",
 	
 	"ang" : "&ang;",
-	"angle" : "&ang;",
 
 	"therefore" : "&there4;",
 
-	// Non HTML 4.0
-	"o" : "&compfn;"
-};
-
-function isPostfix(op) {
-	return op == "%" || op == "&prime;" || op == "&hellip;";
-}
-
-const nonAlphaOperators = {
-	// Operators which need special handling
-	"_" : "_",      // Suscripting
-	"^" : "^",      // Superscripting. Can also represent &and;
-	"/" : "/",      // Fractions
-	"." : "&sdot;", // Invisible multiplication. Can also represent &sdot;
-	"\\." : "&sdot;", // Invisible multiplication. Can also represent &sdot;
-	"!" : "!",      // Factorial. Can also represent &not;
-	":" : "&af;",   // An invisible operator. Can also represent spaced colon.
-	".." : "..",    // Special syntax for ranges.
-	
-	// These letter-like operators have special formatting
-	"\\P" : "P",
-	"\\C" : "C",
-	"\\F" : "F",  // Hyper-geometric function
-
-	// HTML 4.0 operators
 	"\\\'" : "&prime;",
 	"\'" : "&prime;",
 	"%" : "%",
@@ -651,6 +645,8 @@ const nonAlphaOperators = {
 	               // wants it to look that way.
 
 	// Not in HTML 4.0
+	"o" : "&compfn;",
+
 	"||" : "&par;",
 	"|" : "&mid;",
 
@@ -664,16 +660,16 @@ const nonAlphaOperators = {
 	"$$$" : "&iiint;",
 };
 
-const maxNonAlphaOperatorKeyLength = 4;
+const maxOperatorKeyLength = 4;  // Actually only matters for the keys that start with a non-letter.
+
+function isPostfix(op) {
+	return op == "%" || op == "&prime;" || op == "&hellip;";
+}
 
 function writeIdentifier(nesting) {
 	let isCapitalLetter = (this.identifier.length == 1 && this.identifier >= "A" && this.identifier <= "Z");
 	let startTag = isCapitalLetter ? "<mi mathvariant=normal>" : "<mi>";
 	return pad(startTag + this.identifier + "</mi>", nesting);
-}
-
-function parseIdentifier(p) {
-	return parseQuotedIdentifier(p) || parseAlphaIdentifier(p) || parseNonAlphaIdentifier(p);
 }
 
 function isAlpha(c) {
@@ -701,10 +697,19 @@ function parseQuotedIdentifier(p) {
 	return "";
 }
 
-function parseAlphaIdentifier(p) {
-	let result = {"type": IDENTIFIER, "identifier": "", "write" : writeIdentifier};
+function parseIdentifier(p) {
+	let result = parseQuotedIdentifier(p);
+	if (result) {
+		return result;
+	}
 
-	if (p.i < p.s.length && isAlpha(p.s[p.i])) {
+	result = {"type": IDENTIFIER, "identifier": "", "write" : writeIdentifier};
+
+	if (p.i >= p.s.length) {
+		return "";
+	}
+
+	if (isAlpha(p.s[p.i])) {
 		let end = p.i + 1;
 		while (end < p.s.length && isAlpha(p.s[end])) {
 			++end;
@@ -716,26 +721,20 @@ function parseAlphaIdentifier(p) {
 			result.identifier = s;
 			p.i = end;
 			return result;
-		} else if (s in alphaIdentifiers) {
-			result.identifier = alphaIdentifiers[s];
+		} else if (s in identifierDictionary) {
+			result.identifier = identifierDictionary[s];
 			p.i = end;
 			return result;
 		}
-	}
-
-	return "";
-}
-
-function parseNonAlphaIdentifier(p) {
-	let result = {"type": IDENTIFIER, "identifier": "", "write" : writeIdentifier};
-	
-	for (let i = maxNonAlphaIdentifierKeyLength; i > 0; --i) {
-		if (p.i + i <= p.s.length) {
-			let s = p.s.substring(p.i, p.i + i)
-			if (s in nonAlphaIdentifiers) {
-				result.identifier = nonAlphaIdentifiers[s];
-				p.i += i;
-				return result;
+	} else {
+		for (let i = maxIdentifierKeyLength; i > 0; --i) {
+			if (p.i + i <= p.s.length) {
+				let s = p.s.substring(p.i, p.i + i)
+				if (s in identifierDictionary) {
+					result.identifier = identifierDictionary[s];
+					p.i += i;
+					return result;
+				}
 			}
 		}
 	}
@@ -748,31 +747,6 @@ function writeOperator(nesting) {
 }
 
 function parseOperator(p) {
-	return parseAlphaOperator(p) || parseNonAlphaOperator(p);
-}
-
-function parseAlphaOperator(p) {
-	let result = {"type": OPERATOR, "operator": "", "write": writeOperator};
-
-	if (p.i < p.s.length && isAlpha(p.s[p.i])) {
-		let end = p.i + 1;
-		while (end < p.s.length && isAlpha(p.s[end])) {
-			++end;
-		}
-
-		let s = p.s.substring(p.i, end);
-
-		if (s in alphaOperators) {
-			result.operator = alphaOperators[s];
-			p.i = end;
-			return result;
-		}
-	}
-
-	return "";
-}
-
-function parseNonAlphaOperator(p) {
 	let result = {"type": OPERATOR, "operator": "", "write": writeOperator};
 
 	if (p.expectBracket && matchString(p, p.expectBracket)) {
@@ -781,19 +755,34 @@ function parseNonAlphaOperator(p) {
 		return "";
 	}
 
-	for (let i = maxNonAlphaOperatorKeyLength; i > 0; --i) {
-		if (p.i + i <= p.s.length) {
-			let s = p.s.substring(p.i, p.i + i)
-			if (s in nonAlphaOperators) {
-				p.i += i;
-				result.operator = nonAlphaOperators[s];
-				break;
-			}
-		}
+	if (p.i >= p.s.length) {
+		return "";
 	}
 
-	if (result.operator) {
-		return result;
+	if (isAlpha(p.s[p.i])) {
+		let end = p.i + 1;
+		while (end < p.s.length && isAlpha(p.s[end])) {
+			++end;
+		}
+
+		let s = p.s.substring(p.i, end);
+
+		if (s in operatorDictionary) {
+			result.operator = operatorDictionary[s];
+			p.i = end;
+			return result;
+		}
+	} else {
+		for (let i = maxOperatorKeyLength; i > 0; --i) {
+			if (p.i + i <= p.s.length) {
+				let s = p.s.substring(p.i, p.i + i)
+				if (s in operatorDictionary) {
+					p.i += i;
+					result.operator = operatorDictionary[s];
+					return result;
+				}
+			}
+		}
 	}
 
 	return "";
