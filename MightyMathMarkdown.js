@@ -29,6 +29,7 @@ const NUMBER = 9;
 const FRACTION = 10;
 const SCRIPTED = 11;
 const ROOT = 12;
+const LIMITS = 13;
 // TODO: VINCULUM
 // TODO: OVERBRACE
 // TODO: UNDERBRACE
@@ -203,6 +204,12 @@ function parseRow(p) {
 			} else {
 				break;
 			}
+			if (matchString(p, "..")) {
+				// Dot-dot is used to separate ranges. It can't be in a cluster.
+				let dotdot = {"type": OPERATOR, "operator": "..", "write": writeOperator};
+				result.elements.push(dotdot);
+				p.expectTerm = true;
+			}
 		}
 	}
 
@@ -237,6 +244,10 @@ function parseCluster(p) {
 					result.elements.push(expr);
 					p.expectTerm = false;
 				} else if (expr = parseOperator(p)) {
+					if (expr.operator == "..") {
+						p.i -= 2;  // Rewind
+						break;
+					}
 					result.elements.push(expr);
 					p.expectTerm = !isPostfix(expr.operator);
 				} else if (expr = parseUnrecognized(p)) {
@@ -247,6 +258,10 @@ function parseCluster(p) {
 				}
 			} else {
 				if (expr = parseOperator(p)) {
+					if (expr.operator == "..") {
+						p.i -= 2;  // Rewind
+						break;
+					}
 					result.elements.push(expr);
 					p.expectTerm = !isPostfix(expr.operator);
 				} else if (expr = parseIdentifier(p)) {
@@ -856,6 +871,7 @@ function doLayout(p) {
 	visitNodes(p, layoutExponents);
 	visitNodes(p, layoutRoots);
 	visitNodes(p, layoutFractions);
+	visitNodes(p, layoutRanges);
 }
 
 function writeScripted(nesting) {
@@ -1059,6 +1075,90 @@ function layoutFractions(p) {
 				}
 
 				p.elements.splice(i, 3, frac);
+			} else {
+				++i;
+			}
+		}
+	}
+}
+
+function writeLimits(nesting)
+{
+	let result = "";
+	if ((this.operator || this.nested) && this.lower) {
+		if (this.upper) {
+			result = pad("<munderover>", nesting);
+			result += this.operator ? pad("<mo largeop=true>" + this.operator + "</mo>", nesting + 1) :
+					this.nested ? this.nested.write(nesting + 1) : "";
+			result += this.lower.write(nesting + 1);
+			result += this.upper.write(nesting + 1);
+			result += pad("</munderover>", nesting);
+		} else {
+			result = pad("<munder>", nesting);
+			result += this.operator ? pad("<mo largeop=true>" + this.operator + "</mo>", nesting + 1) :
+					this.nested ? this.nested.write(nesting + 1) : "";
+			result += this.lower.write(nesting + 1);
+			result += pad("</munder>", nesting);
+		}
+	}
+	return result;
+}
+
+function layoutRanges(p)
+{
+	// There are three kinds of ranges: limits on a summation operator, limits on a bracketed group,
+	// and the index of a radical (not really a range).
+
+	if (p.type == CLUSTER && p.elements.length >= 2) {
+		let i = 0;
+		while (i + 1 < p.elements.length) {
+			if (p.elements[i + 1].type == BRACKETED && p.elements[i + 1].left == '[' &&
+					p.elements[i + 1].contents)
+			{
+				let range = p.elements[i + 1].contents;
+				let lowerLimit = range;
+				let upperLimit = null;
+
+				if (range.elements) {
+					for (let j = 0; j < range.elements.length; ++j) {
+						if (range.elements[j].type == OPERATOR && range.elements[j].operator == "..") {
+							lowerLimit = makeCluster(range.elements.slice(0, j));
+							upperLimit = makeCluster(range.elements.slice(j + 1));
+							break;
+						}
+					}
+				}
+
+				if (p.elements[i].type == OPERATOR) {
+					let limit = {"type": LIMITS,
+							"operator": p.elements[i].operator,
+							"lower": lowerLimit, "upper": upperLimit,
+							"write": writeLimits,
+							"children": function(){return [this.operator, this.lower, this.upper]} };
+					p.elements.splice(i, 2, limit);
+				} else if (p.elements[i].type == LIMITS) {
+					// You can nest limits.
+					let limit = {"type": LIMITS,
+							"nested": p.elements[i],
+							"lower": lowerLimit, "upper": upperLimit,
+							"write": writeLimits,
+							"children": function(){return [this.nested, this.lower, this.upper]} };
+					p.elements.splice(i, 2, limit);
+				} else if (p.elements[i].type == ROOT) {
+					p.elements[i].index = p.elements[i + 1];
+					p.elements.splice(i + 1, 1);
+				} else if (p.elements[i].type == BRACKETED || p.elements[i].type == IDENTIFIER) {
+					// Ranges on a bracketed group or identifier are written like super/subscripts.
+					// This can be used as an alternative to subscript syntax for some things.
+					let limit = {"type": SCRIPTED,
+						"base": p.elements[i],
+						"subscript": lowerLimit, "superscript": upperLimit,
+						"write": writeScripted,
+						"children": function(){return [this.base, this.subscript, this.superscript]} };
+					p.elements.splice(i, 2, limit);
+				} else {
+					++i;
+				}
 			} else {
 				++i;
 			}
