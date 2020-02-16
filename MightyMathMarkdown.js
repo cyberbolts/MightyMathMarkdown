@@ -589,8 +589,12 @@ const operatorDictionary = {
 
 	"therefore" : "&there4;",
 
-	"\\\'" : "&prime;",
 	"\'" : "&prime;",
+	"\\\'" : "&prime;",
+	"\'\'" : "&Prime;",
+	"\\\'\'" : "&Prime;",
+	"\'\'\'" : "&tprime;",
+	"\\\'\'\'" : "&tprime;",
 	"%" : "%",
 
 	"..." : "&hellip;",
@@ -671,8 +675,12 @@ const operatorDictionary = {
 
 const maxOperatorKeyLength = 4;  // Actually only matters for the keys that start with a non-letter.
 
+function isPrimeMark(op) {
+	return op == "&prime;" || op == "&Prime;" || op == "&tprime;";
+}
+
 function isPostfix(op) {
-	return op == "%" || op == "&prime;" || op == "&hellip;";
+	return op == "%" || op == "&hellip;" || isPrimeMark(op);
 }
 
 function writeIdentifier(nesting) {
@@ -921,6 +929,7 @@ function layoutSubscripts(p) {
 		}
 	}
 
+	// Identifier + Number creates a subscript
 	if ((p.type == CLUSTER) && p.elements.length >= 2) {
 		let i = p.elements.length - 2;
 		while (i >= 0) {
@@ -942,6 +951,22 @@ function layoutSubscripts(p) {
 	}
 }
 
+function makeSuperscript(base, superscript) {
+	if (superscript.type == BRACKETED) {
+		superscript = superscript.contents;
+	}
+
+	if (base.type == SCRIPTED && !base.superscript) {
+		base.superscript = superscript;
+		return base;
+	} else {
+		let scripted = {"type": SCRIPTED, "base": base, "superscript": superscript,
+			"write": writeScripted,
+			"children" : function(){return [this.base, this.subscript, this.superscript]} };
+		return scripted;
+	}
+}
+
 function layoutExponents(p) {
 	if ((p.type == CLUSTER) && p.elements.length >= 3) {
 		let i = p.elements.length - 3;
@@ -952,19 +977,23 @@ function layoutExponents(p) {
 				let base = p.elements[i];
 				let superscript = p.elements[i + 2];
 
-				if (superscript.type == BRACKETED) {
-					superscript = superscript.contents;
-				}
+				p.elements.splice(i, 3, makeSuperscript(base, superscript));
+			} else {
+				--i;
+			}
+		}
+	}
 
-				if (base.type == SCRIPTED && !base.superscript) {
-					base.superscript = superscript;
-					p.elements.splice(i + 1, 2);
-				} else {
-					let scripted = {"type": SCRIPTED, "base": base, "superscript": superscript,
-						"write": writeScripted,
-						"children" : function(){return [this.base, this.subscript, this.superscript]} };
-					p.elements.splice(i, 3, scripted);
-				}
+	if ((p.type == CLUSTER) && p.elements.length >= 2) {
+		let i = p.elements.length - 2;
+		while (i >= 0) {
+			if (i + 1 < p.elements.length && p.elements[i + 1].type == OPERATOR &&
+					isPrimeMark(p.elements[i + 1].operator))
+			{
+				let base = p.elements[i];
+				let primemark = p.elements[i + 1];
+
+				p.elements.splice(i, 2, makeSuperscript(base, primemark));
 			} else {
 				--i;
 			}
