@@ -529,35 +529,79 @@ const maxIdentifierKeyLength = 8;  // Actually only matters for the keys that st
 // * Those that start with a non-alphabetic character
 // * Those that are entirely alphabetic.
 const operatorDictionary = {
-	// Operators which need special handling
-	"_" : "_",      // Suscripting
-	"^" : "^",      // Superscripting. Can also represent &and;
-	"/" : "/",      // Fractions
-	"." : "&sdot;", // Invisible multiplication. Can also represent &sdot;
-	"\\." : "&sdot;", // Invisible multiplication. Can also represent &sdot;
-	"!" : "!",      // Factorial. Can also represent &not;
-	":" : "&af;",   // An invisible operator. Can also represent spaced colon.
-	".." : "..",    // Special syntax for ranges.
+	//
+	// The following operators are *~*MAGIC*~*. There is special code for them.
+	//
 
-	// These operators are ASCII text strings. Are there any other ASCII words
-	// that should be treated as operators?
-	// TODO: Treat ASCII strings at operators if enclosed in a pair of colons. :operator:
-	"lim" : "lim",
-	"det" : "det",
+	// These are punctuators more than operators.
+	".."  : "..",   // Separator for ranges.
+	"_"   : "_",    // Spaced: Blank (useful for aligning tables).  Non-spaced: subscripting.
+	"^"   : "^",    // Spaced: Logical AND.  Non-spaced: Exponentiation.
+	"."   : ".",    // Spaced: Dot product. Non-spaced: Invisible product. In number: decimal or thousands separator.
+	"\\." : ".",    // Ditto, but can't be a decimal or thousands separator.
+	"/"   : "/",    // Fractions
+
+	":"   : ":",    // Alone or at end of cluster: Colon. Otherwise: RESERVED
+	"\\:" : ":",    // Allow an escaped literal colon
+	","   : ",",    // Just a plain comma, unless it's in a number.
+	"\\," : ",",    // Ditto, but can't be interpreted as part of a number.
+
+	// Note that the semi-colon is also a punctuator with special handling. It separates rows of a matrix.
+	"\\;" : ";",   // Allow an escaped literal semicolon
+
+	// This is a suffix
+	"%" : "%",      // At end of cluster: Percent. Otherwise: RESERVED
+
+	// Context-dependent operator
+	"!" : "!",      // At start of cluster: Logical NOT.  Otherwise: Factorial.
+
+	// These are superscript when final in a cluster. e.g. lim[x -> 0-] 1/x != lim[x -> 0+] 1/x
+	"+" : "+",
+	"-" : "&minus;",
+
+	// This is also superscript when final in a cluster (complex conjugate)
+	"*" : "&lowast;",
+
+	// These are automatically superscript.
+	// Note that single quotes will be treated as delimiters for identifiers (when expectTerm is true).
+	// Hence the backslash-escaped versions.
+	"\'" : "&prime;",
+	"\\\'" : "&prime;",
+	"\'\'" : "&Prime;",
+	"\\\'\'" : "&Prime;",
+	"\'\'\'" : "&tprime;",
+	"\\\'\'\'" : "&tprime;",
+
+	// Roots
+	"sqrt": "&radic;",
+	"root": "&radic;",
 
 	// These letter-like operators have special formatting
 	"\\P" : "P",
 	"\\C" : "C",
 	"\\F" : "F",  // Hyper-geometric function
-
 	"\\d" : "&dd;",  // Differential d
 
-	// HTML 4.0 entities
-	"X" : "&times;",  // cross-product
-	"cross" : "&times;",  // cross-product
+	// This is more like an identifier, but it's here to stop the parser confusing it with .. or .
+	"..." : "&hellip;",
+	"\\..." : "&hellip;",
 
-	"sqrt": "&radic;",
-	"root": "&radic;",
+
+	//
+	// The following operators are not magic.
+	//
+
+	// These operators are ASCII text strings. Are there any other ASCII words
+	// that should be treated as operators?
+	// TODO: Maybe treat ASCII strings at operators if enclosed in a pair of colons. e.g. :operator:
+	"lim" : "lim",
+	"det" : "det",
+
+	// HTML 4.0 entities
+
+	"cross" : "&times;",  // cross-product
+	"X" : "&times;",  // cross-product
+	"dot" : "&sdot;",  // dot-product
 
 	"not" : "&not;",
 	"¬" : "&not;",  // British keyboards have this.
@@ -589,46 +633,25 @@ const operatorDictionary = {
 
 	"therefore" : "&there4;",
 
-	"\'" : "&prime;",
-	"\\\'" : "&prime;",
-	"\'\'" : "&Prime;",
-	"\\\'\'" : "&Prime;",
-	"\'\'\'" : "&tprime;",
-	"\\\'\'\'" : "&tprime;",
-	"%" : "%",
-
-	"..." : "&hellip;",
-	"\\..." : "&hellip;",
-
 	"\\A:" : "&forall;",
 	"\\E:" : "&exist;",
 
-	"\\:" : ":",   // Allow an escaped literal colon
-	"\\;" : ";",   // Allow an escaped literal semicolon
-
-	"-" : "&minus;",
 	"+/-" : "&plusmn;",
-	"*" : "&lowast;",
 
 	"@" : "&part;",
-
-	"\\v" : "&or;",
-
 	"$" : "&int;",
+	"$$" : "&Int;",  // Not in HTML 4.0
+	"$$$" : "&iiint;",  // Not in HTML 4.0
 
-	"=" : "=",
-	"!=" : "=",
-	"¬=" : "=",
-
-	"==" : "=",
-	"!==" : "&ne;",
-	"¬==" : "&ne;",
-
-	"===" : "&equiv;",
+	"=" : "=", "==" : "=",
+	"!=" : "&ne;", "!==" : "&ne;",
+	"¬=" : "&ne;", "¬==" : "&ne;",
 
 	"~" : "&sim;",
 	"~~" : "&asymp;",
+	"~=" : "&sime;",  // Not in HTML 4.0
 	"~==" : "&cong;",
+	"===" : "&equiv;",
 
 	"<" : "&lt;",
 	">" : "&gt;",
@@ -639,7 +662,6 @@ const operatorDictionary = {
 	":>:" : "&sup;",  // Superset
 	":<=:" : "&sube;",
 	":>=:" : "&supe;",
-
 	":!<:" : "&nsub;",
 	":¬<:" : "&nsub;",
 
@@ -658,19 +680,17 @@ const operatorDictionary = {
 	"<=>" : "&hArr;",
 
 	// Not in HTML 4.0
+
+	"comp" : "&compfn;",
 	"o" : "&compfn;",
 
 	"||" : "&par;",
 	"|" : "&mid;",
 
-	"~=" : "&sime;",
 	"<<" : "&ll;",
 	">>" : "&rr;",
 	"<<<" : "&Ll;",
 	">>>" : "&Rr;",
-
-	"$$" : "&Int;",
-	"$$$" : "&iiint;",
 };
 
 const maxOperatorKeyLength = 4;  // Actually only matters for the keys that start with a non-letter.
@@ -763,7 +783,13 @@ function writeOperator(nesting) {
 	if (this.operator == "&dd;") {
 		// The MathML standard says this should look like a double-struck d.
 		// I don't know anyone who wants it to look like that.
-		return pad("<mspace width=thinmathspace /><mi>d</mi>", nesting);
+
+		// return pad("<mspace width=thinmathspace /><mi>d</mi>", nesting);
+		return pad("<mspace width=0.166em /><mi>d</mi>", nesting);
+	}
+
+	if (this.operator == "_") {
+		return pad("<mspace width=1ex />", nesting);
 	}
 
 	return pad("<mo>" + this.operator + "</mo>", nesting);
@@ -875,11 +901,46 @@ function visitNodes(p, visitor) {
 }
 
 function doLayout(p) {
+	visitNodes(p, removeInvisibleOperators);
 	visitNodes(p, layoutSubscripts);
 	visitNodes(p, layoutExponents);
 	visitNodes(p, layoutRoots);
 	visitNodes(p, layoutFractions);
 	visitNodes(p, layoutRanges);
+	visitNodes(p, transformOperators);
+	visitNodes(p, makeOperatorsSuperscript);
+}
+
+function removeInvisibleOperators(p) {
+	if (p.type == CLUSTER) {
+		let i = 0;
+		while (i < p.elements.length) {
+			if (p.elements[i].type == OPERATOR && p.elements[i].operator == ".") {
+				p.elements.splice(i, 1);
+			} else {
+				++i;
+			}
+		}
+	}
+}
+
+function transformOperators(p) {
+	if (p.type == CLUSTER || p.type == ROW) {
+		let i = 0;
+		while (i < p.elements.length) {
+			if (p.elements[i].type == OPERATOR) {
+				let element = p.elements[i];
+				if (element.operator == ".") {
+					element.operator = "&sdot;";
+				} else if (element.operator == "^") {
+					element.operator = "&and;";
+				} else if (element.operator == "!" && i == 0) {
+					element.operator = "&not;";
+				}
+			}
+			++i;
+		}
+	}
 }
 
 function writeScripted(nesting) {
@@ -983,20 +1044,28 @@ function layoutExponents(p) {
 			}
 		}
 	}
+}
 
+function isSuperscriptWhenFinal(c) {
+	return c == "&lowast;" || c == "+" || c == "&minus;";
+}
+
+function makeOperatorsSuperscript(p) {
 	if ((p.type == CLUSTER) && p.elements.length >= 2) {
 		let i = p.elements.length - 2;
 		while (i >= 0) {
-			if (i + 1 < p.elements.length && p.elements[i + 1].type == OPERATOR &&
-					isPrimeMark(p.elements[i + 1].operator))
-			{
-				let base = p.elements[i];
-				let primemark = p.elements[i + 1];
+			if (i + 1 < p.elements.length && p.elements[i + 1].type == OPERATOR) {
+				let op = p.elements[i + 1].operator;
+				if (isPrimeMark(op) ||
+					(i + 2 == p.elements.length && isSuperscriptWhenFinal(op)))
+				{
+					let base = p.elements[i];
+					let primemark = p.elements[i + 1];
 
-				p.elements.splice(i, 2, makeSuperscript(base, primemark));
-			} else {
-				--i;
+					p.elements.splice(i, 2, makeSuperscript(base, primemark));
+				}
 			}
+			--i;
 		}
 	}
 }
