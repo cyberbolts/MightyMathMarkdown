@@ -972,6 +972,20 @@ function writeRoot(nesting) {
 	return result;
 }
 
+function makeCluster(nodeArray)
+{
+	if (nodeArray.length > 1) {
+		return {"type": CLUSTER,
+			"elements": nodeArray,
+			"write": writeRow,
+			"children": function(){return this.elements} };
+	} else if (nodeArray.length == 1) {
+		return nodeArray[0];
+	}
+
+	return "";
+}
+
 function layoutRoots(p) {
 	if ((p.type == CLUSTER || p.type == ROW) && p.elements.length >= 2) {
 		let i = p.elements.length - 2;
@@ -982,13 +996,7 @@ function layoutRoots(p) {
 				let radical = {"type": ROOT, "radicand": null, "index": null,
 					"write": writeRoot, "children": function(){return [this.radicand, this.index]} };
 
-				if (i + 2 == p.elements.length) {
-					radical.radicand = p.elements[i + 1];
-				} else {
-					radical.radicand = {"type": CLUSTER, "elements": p.elements.slice(i + 1),
-						"write": writeRow,
-						"children": function(){return this.elements} };
-				}
+				radical.radicand = makeCluster(p.elements.slice(i + 1));
 
 				if (radical.radicand.type == BRACKETED) {
 					radical.radicand = radical.radicand.contents;
@@ -1017,22 +1025,8 @@ function layoutFractions(p) {
 						"write": writeFraction,
 						"children" : function(){return [this.numerator, this.denominator]} };
 
-
-				if (i == 1) {
-					frac.numerator = p.elements[0];
-				} else {
-					frac.numerator = {"type": CLUSTER, "elements": p.elements.slice(0, i),
-						"write": writeRow,
-						"children": function(){return this.elements} };
-				}
-
-				if (i + 2 == p.elements.length) {
-					frac.denominator = p.elements[i + 1];
-				} else {
-					frac.denominator = {"type": CLUSTER, "elements": p.elements.slice(i + 1),
-						"write": writeRow,
-						"children": function(){return this.elements} };
-				}
+				frac.numerator = makeCluster(p.elements.slice(0, i));
+				frac.denominator = makeCluster(p.elements.slice(i + 1));
 
 				if (frac.numerator.type == BRACKETED) {
 					frac.numerator = frac.numerator.contents;
