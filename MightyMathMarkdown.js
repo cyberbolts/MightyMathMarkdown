@@ -50,8 +50,7 @@ function parse(s) {
 	return parseGrid(parseObject);
 }
 
-function matchString(p, s)
-{
+function matchString(p, s) {
 	if (p.i + s.length > p.s.length) {
 		return false;
 	}
@@ -80,8 +79,7 @@ function pad(s, nesting) {
 	return s;
 }
 
-function writeGrid(nesting)
-{
+function writeGrid(nesting) {
 	let result = "";
 
 	result += pad("<mtable>", nesting);
@@ -117,8 +115,7 @@ function parseGrid(p) {
 	return result;
 }
 
-function writeGridRow(nesting)
-{
+function writeGridRow(nesting) {
 	let result = "";
 
 	result += pad("<mtr>", nesting);
@@ -160,8 +157,7 @@ function parseGridRow(p) {
 	return result;
 }
 
-function writeCell(nesting)
-{
+function writeCell(nesting) {
 	let result = "";
 
 	result += pad("<mtd>", nesting);
@@ -182,8 +178,7 @@ function parseCell(p) {
 	return result;
 }
 
-function writeRow(nesting)
-{
+function writeRow(nesting) {
 	let result = "";
 
 	result += pad("<mrow>", nesting);
@@ -414,8 +409,7 @@ function parseNumber(p) {
 	return "";
 }
 
-function writeText(nesting)
-{
+function writeText(nesting) {
 	let text = this.text;
 	text = text.replace(/\\u/g, "&micro;");
 	return pad("<mtext>&thinsp;" + text + "&nbsp;</mtext>", nesting);
@@ -1104,8 +1098,7 @@ function writeRoot(nesting) {
 	return result;
 }
 
-function makeCluster(nodeArray)
-{
+function makeCluster(nodeArray) {
 	if (nodeArray.length > 1) {
 		return {"type": CLUSTER,
 			"elements": nodeArray,
@@ -1217,8 +1210,7 @@ function layoutFractions(p) {
 	}
 }
 
-function writeLimits(nesting)
-{
+function writeLimits(nesting) {
 	let result = "";
 	if ((this.operator || this.nested) && this.lower) {
 		if (this.upper) {
@@ -1320,8 +1312,7 @@ function writeUnderbrace(nesting) {
 	return result;
 }
 
-function makeRowFromCells(cells)
-{
+function makeRowFromCells(cells) {
 	let rows = [];
 	for (cell of cells) {
 		rows.push(cell.row);
