@@ -916,10 +916,10 @@ function visitNodes(p, visitor) {
 }
 
 function doLayout(p) {
-	visitNodes(p, removeInvisibleOperators);
 	visitNodes(p, layoutSubscripts);
 	visitNodes(p, layoutExponents);
 	visitNodes(p, layoutRanges);
+	visitNodes(p, removeInvisibleOperators);
 	visitNodes(p, layoutRoots);
 	visitNodes(p, layoutFractions);
 	visitNodes(p, transformOperators);
@@ -1268,7 +1268,7 @@ function layoutRanges(p) {
 					}
 				}
 
-				if (p.elements[i].type == OPERATOR) {
+				if (p.elements[i].type == OPERATOR && p.elements[i].operator != ".") {
 					let limit = {"type": LIMITS,
 							"operator": p.elements[i].operator,
 							"lower": lowerLimit, "upper": upperLimit,
