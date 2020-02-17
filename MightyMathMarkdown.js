@@ -1268,7 +1268,15 @@ function layoutRanges(p) {
 					}
 				}
 
-				if (p.elements[i].type == OPERATOR && p.elements[i].operator != ".") {
+				if (p.elements[i].type == OPERATOR && p.elements[i].operator == "&mid;") {
+					// The "evaluated-at" bar. e.g. df/dx |[x = 5]
+					let limit = {"type": SCRIPTED,
+						"base": p.elements[i],
+						"subscript": lowerLimit, "superscript": upperLimit,
+						"write": writeScripted,
+						"children": function(){return [this.base, this.subscript, this.superscript]} };
+					p.elements.splice(i, 2, limit);
+				} else if (p.elements[i].type == OPERATOR && p.elements[i].operator != ".") {
 					let limit = {"type": LIMITS,
 							"operator": p.elements[i].operator,
 							"lower": lowerLimit, "upper": upperLimit,
