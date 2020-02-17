@@ -585,9 +585,6 @@ const operatorDictionary = {
 	"underbrace": "underbrace",
 
 	// These letter-like operators have special formatting
-	"\\P" : "P",
-	"\\C" : "C",
-	"\\F" : "F",  // Hyper-geometric function
 	"\\d" : "&dd;",  // Differential d
 
 	// This is more like an identifier, but it's here to stop the parser confusing it with .. or .
@@ -973,26 +970,35 @@ function writeScripted(nesting) {
 	return this.base.write(nesting);
 }
 
+function makeSubscript(base, subscript) {
+	if (subscript.type == BRACKETED) {
+		subscript = subscript.contents;
+	}
+
+	let scripted = {"type": SCRIPTED, "base": base, "subscript": subscript,
+		"write": writeScripted,
+		"children" : function(){return [this.base, this.subscript, this.superscript]} };
+	return scripted;
+}
+
 function layoutSubscripts(p) {
 	// The _ operator
-	if ((p.type == CLUSTER) && p.elements.length >= 3) {
-		let i = p.elements.length - 3;
+	if ((p.type == CLUSTER) && p.elements.length >= 2) {
+		let i = p.elements.length - 2;
 		while (i >= 0) {
-			if (i + 2 < p.elements.length && p.elements[i + 1].type == OPERATOR &&
-					p.elements[i + 1].operator == "_")
+			if (i + 1 < p.elements.length && p.elements[i].type == OPERATOR &&
+					p.elements[i].operator == "_")
 			{
-				let base = p.elements[i];
-				let subscript = p.elements[i + 2];
+				let subscript = p.elements[i + 1];
 
-				if (subscript.type == BRACKETED) {
-					subscript = subscript.contents;
+				if (i > 0) {
+					let base = p.elements[i - 1];
+					p.elements.splice(i - 1, 3, makeSubscript(base, subscript));
+				} else {
+					// Create an dummy identifier
+					let base = {"type": IDENTIFIER, identifier: "", "write": writeIdentifier};
+					p.elements.splice(i, 2, makeSubscript(base, subscript));
 				}
-
-				let scripted = {"type": SCRIPTED, "base": base, "subscript": subscript,
-						"write": writeScripted,
-						"children" : function(){return [this.base, this.subscript, this.superscript]} };
-
-				p.elements.splice(i, 3, scripted);
 			} else {
 				--i;
 			}
@@ -1009,11 +1015,7 @@ function layoutSubscripts(p) {
 				let base = p.elements[i];
 				let subscript = p.elements[i + 1];
 
-				let scripted = {"type": SCRIPTED, "base": base, "subscript": subscript,
-						"write": writeScripted,
-						"children" : function(){return [this.base, this.subscript, this.superscript]} };
-
-				p.elements.splice(i, 2, scripted);
+				p.elements.splice(i, 2, makeSubscript(base, subscript));
 			} else {
 				--i;
 			}
@@ -1038,16 +1040,23 @@ function makeSuperscript(base, superscript) {
 }
 
 function layoutExponents(p) {
-	if ((p.type == CLUSTER) && p.elements.length >= 3) {
-		let i = p.elements.length - 3;
+	if ((p.type == CLUSTER) && p.elements.length >= 2) {
+		let i = p.elements.length - 2;
 		while (i >= 0) {
-			if (i + 2 < p.elements.length && p.elements[i + 1].type == OPERATOR &&
-					p.elements[i + 1].operator == "^")
+			if (i + 1 < p.elements.length && p.elements[i].type == OPERATOR &&
+					p.elements[i].operator == "^")
 			{
-				let base = p.elements[i];
-				let superscript = p.elements[i + 2];
+				let superscript = p.elements[i + 1];
 
-				p.elements.splice(i, 3, makeSuperscript(base, superscript));
+				if (i > 0) {
+					let base = p.elements[i - 1];
+					p.elements.splice(i - 1, 3, makeSuperscript(base, superscript));
+				} else {
+					// Create a dummy identifier
+					let base = {"type": IDENTIFIER, "identifier": "", "write": writeIdentifier};
+					p.elements.splice(i, 2, makeSuperscript(base, superscript));
+				}
+
 			} else {
 				--i;
 			}
