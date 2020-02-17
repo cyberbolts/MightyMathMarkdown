@@ -229,6 +229,20 @@ function parseCluster(p) {
 		"children": function(){return this.elements} };
 
 	while (p.i < p.s.length) {
+		if (p.expectBracket && matchString(p, p.expectBracket)) {
+			// We don't want to match the final bracket
+			p.i -= p.expectBracket.length;  // Rewind
+			break;
+		} else if (p.expectBracket == ")" && matchString(p, "]")) {
+			// Allow half-open intervals like (1, 5]
+			p.i -= 1;  // Rewind the "]"
+			break;
+		} else if (p.expectBracket == "]" && matchString(p, ")")) {
+			// Allow half-open intervals like [1, 3)
+			p.i -= 1;  // Rewind the ")"
+			break;
+		}
+
 		let expr;
 		if (expr = parseBracketed(p)) {
 			result.elements.push(expr);
@@ -797,12 +811,6 @@ function writeOperator(nesting) {
 function parseOperator(p) {
 	let result = {"type": OPERATOR, "operator": "", "write": writeOperator};
 
-	if (p.expectBracket && matchString(p, p.expectBracket)) {
-		// We don't want to match the final bracket
-		p.i -= p.expectBracket.length;  // Rewind
-		return "";
-	}
-
 	if (p.i >= p.s.length) {
 		return "";
 	}
@@ -837,12 +845,6 @@ function parseOperator(p) {
 }
 
 function parseUnrecognized(p) {
-	if (p.expectBracket && matchString(p, p.expectBracket)) {
-		// We don't want to match the final bracket
-		p.i -= p.expectBracket.length;  // Rewind
-		return "";
-	}
-
 	// An unrecognized word or letter eventually ends up as an identifier
 	if (p.i < p.s.length && isAlpha(p.s[p.i])) {
 		let result = {"type": IDENTIFIER, "identifier": "", "write": writeIdentifier};
