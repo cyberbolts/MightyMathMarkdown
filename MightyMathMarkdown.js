@@ -426,6 +426,11 @@ function parseNumber(p) {
 
 function writeText(nesting) {
 	let text = this.text;
+
+	if (!text) {
+		return "";  // If the user writes "", nothing is output. Useful for setting expectTerm to false.
+	}
+
 	text = text.replace(/\\u/g, "&micro;");
 	return pad("<mtext>&thinsp;" + text + "&nbsp;</mtext>", nesting);
 }
