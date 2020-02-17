@@ -8,7 +8,8 @@ function toMathML(s, isDisplayStyle) {
 
 	lines = s.split("\n");
 	handleBraceArrows(lines);
-	s = lines.join(" ");
+	removeBlankLines(lines);
+	s = lines.join(";");
 
 	if (debugMode) console.log(s);
 
@@ -1452,6 +1453,14 @@ function handleBraceArrows(lines) {
 			} else if (annotationArray[j].end >= annotation.start) {
 				annotationArray[j].end += startAdjustment;
 			}
+		}
+	}
+}
+
+function removeBlankLines(lines) {
+	for (let i = lines.length - 1; i >= 0; --i) {
+		if (lines[i] == "") {
+			lines.splice(i, 1);
 		}
 	}
 }
