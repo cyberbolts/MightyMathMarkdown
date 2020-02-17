@@ -39,7 +39,8 @@ const ROOT = 12;
 const LIMITS = 13;
 const OVERBRACE = 14;
 const UNDERBRACE = 15;
-// TODO: VINCULUM
+// TODO: VINCULUM  e.g. `AB`
+// TODO: CHEMICAL_SCRIPT  e.g. C{12} or H2SO4{3+}
 
 function parse(s) {
 	let parseObject = {};
