@@ -4,14 +4,20 @@ const INLINE_STYLE = 0;
 const DISPLAY_STYLE = 1;
 
 function toMathML(s, isDisplayStyle) {
-	s = s.replace(/\n/g, " ").replace(/\t/g, "  ");
-	console.log(s);
+	s = s.replace(/\t/g, "  ");
+
+	lines = s.split("\n");
+	handleBraceArrows(lines);
+	s = lines.join(" ");
+
+	if (debugMode) console.log(s);
 
 	let tree = parse(s);
 	doLayout(tree);
 	let result = write(tree, isDisplayStyle);
 
-	console.log(result);
+	if (debugMode) console.log(result);
+
 	return result;
 }
 
@@ -30,9 +36,9 @@ const FRACTION = 10;
 const SCRIPTED = 11;
 const ROOT = 12;
 const LIMITS = 13;
+const OVERBRACE = 14;
+const UNDERBRACE = 15;
 // TODO: VINCULUM
-// TODO: OVERBRACE
-// TODO: UNDERBRACE
 
 function parse(s) {
 	let parseObject = {};
@@ -572,9 +578,11 @@ const operatorDictionary = {
 	"\'\'\'" : "&tprime;",
 	"\\\'\'\'" : "&tprime;",
 
-	// Roots
+	// Pseudo-operators that produce layout
 	"sqrt": "&radic;",
 	"root": "&radic;",
+	"overbrace": "overbrace",
+	"underbrace": "underbrace",
 
 	// These letter-like operators have special formatting
 	"\\P" : "P",
@@ -673,11 +681,11 @@ const operatorDictionary = {
 	"->" : "&rarr;",  // This one has a shortform
 	"-->" : "&rarr;",
 	"<--" : "&larr;",
-	"<->" : "&harr;",
+	"<-->" : "&harr;",
 
 	"==>" : "&rArr;",
 	"<==" : "&lArr;",
-	"<=>" : "&hArr;",
+	"<==>" : "&hArr;",
 
 	// Not in HTML 4.0
 
@@ -909,6 +917,7 @@ function doLayout(p) {
 	visitNodes(p, layoutRanges);
 	visitNodes(p, transformOperators);
 	visitNodes(p, makeOperatorsSuperscript);
+	visitNodes(p, layoutBraceComments);
 }
 
 function removeInvisibleOperators(p) {
@@ -1259,6 +1268,175 @@ function layoutRanges(p)
 				}
 			} else {
 				++i;
+			}
+		}
+	}
+}
+
+function writeOverbrace(nesting) {
+	let result = "";
+	result = pad("<mover>", nesting);
+	result += pad("<mover>", nesting + 1);
+	result += this.base.write(nesting + 2);
+	result += pad("<mo>&OverBrace;</mo>", nesting + 2);
+	result += pad("</mover>", nesting + 1);
+	result += this.comment.write(nesting + 1);
+	result += pad("</mover>", nesting);
+
+	return result;
+}
+
+function writeUnderbrace(nesting) {
+	let result = "";
+	result = pad("<munder>", nesting);
+	result += pad("<munder>", nesting + 1);
+	result += this.base.write(nesting + 2);
+	result += pad("<mo>&UnderBrace;</mo>", nesting + 2);
+	result += pad("</munder>", nesting + 1);
+	result += this.comment.write(nesting + 1);
+	result += pad("</munder>", nesting);
+
+	return result;
+}
+
+function makeRowFromCells(cells)
+{
+	let rows = [];
+	for (cell of cells) {
+		rows.push(cell.row);
+	}
+
+	if (rows.length > 1) {
+		return {"type": ROW,
+			"elements": rows,
+			"write": writeRow,
+			"children": function(){return this.elements} };
+	} else if (rows.length == 1) {
+		return rows[0]
+	}
+
+	return "";
+}
+
+function layoutBraceComments(p) {
+	if (p.type == CLUSTER && p.elements) {
+		let i = 0;
+		while (i + 1 < p.elements.length) {
+			if (p.elements[i].type == OPERATOR &&
+				(p.elements[i].operator == "overbrace" || p.elements[i].operator == "underbrace") &&
+				p.elements[i + 1].type == BRACKETED &&
+				p.elements[i + 1].contents && p.elements[i + 1].contents.type == GRID &&
+				p.elements[i + 1].contents.gridrows && p.elements[i + 1].contents.gridrows.length == 2)
+			{
+				let grid = p.elements[i + 1].contents;
+
+				let comment = makeRowFromCells(grid.gridrows[0].cells);
+				let base = makeRowFromCells(grid.gridrows[1].cells);
+
+				let over = (p.elements[i].operator == "overbrace");
+
+				let braced = {"type": (over ? OVERBRACE : UNDERBRACE),
+						"base": base, "comment": comment,
+						"write": (over ? writeOverbrace : writeUnderbrace),
+						"children": function(){return [this.base, this.comment]} };
+
+				p.elements.splice(i, 2, braced);
+			}
+			++i;
+		}
+	}
+}
+
+const START = "<--";
+const END = "-->";
+
+function parseArrowLine(s, targetLine, bracetype) {
+	let annotations = [];
+
+	let i = 0;
+	while (i < s.length) {
+		let start = 0;
+		let end = 0;
+		let comment = "";
+
+		if (s.substring(i, i + START.length) == START) {
+			start = i;
+			i += START.length;
+			while (i < s.length) {
+				if (s.substring(i, i + END.length) == END) {
+					i += END.length;
+					let annotation = {
+						"bracetype": bracetype, "targetLine": targetLine,
+						"start": start, "end": i,
+						"comment": comment
+					};
+					annotations.push(annotation);
+					break;
+				} else {
+					comment += s[i];
+					++i;
+				}
+			}
+		} else {
+			++i;
+		}
+	}
+
+	return annotations;
+}
+
+function annotateLine(s, annotation) {
+	return s.substring(0, annotation.start) +
+		annotation.bracetype + "(" +
+		annotation.comment + ";" +
+		s.substring(annotation.start, annotation.end) + ")" +
+		s.substring(annotation.end);
+}
+
+function handleBraceArrows(lines) {
+	let annotationArray = [];
+
+	for (let i = 0; i < lines.length; ++i) {
+		let line = lines[i];
+		if (line.match(/^\s*<--.*-->\s*$/)) {
+			let bracetype;
+			let targetLine;
+			if (i == 0 || lines[i - 1].match(/^\s*$/)) {
+				bracetype = "overbrace";
+				targetLine = i + 1;
+			} else {
+				bracetype = "underbrace";
+				targetLine = i - 1;
+			}
+
+			let annotations = parseArrowLine(line, targetLine, bracetype);
+			annotationArray.push(...annotations);
+
+			lines[i] = "";
+		}
+	}
+
+	annotationArray.sort((a, b) => (b.end - b.start) - (a.end - a.start));  // Longest first.
+
+	for (let i = 0; i < annotationArray.length; ++i) {
+		let annotation = annotationArray[i];
+		let targetLine = annotation.targetLine;
+		lines[targetLine] = annotateLine(lines[targetLine], annotation);
+
+		startAdjustment = annotation.bracetype.length + annotation.comment.length + 2;  // 2 = "(".length + ";".length
+		endAdjustment = startAdjustment + 1;  // 1 == ")".length
+
+		// Adjust the positions of the subsequent annotations.
+		for (let j = i + 1; j < annotationArray.length; ++j ) {
+			if (annotationArray[j].start >= annotation.end) {
+				annotationArray[j].start += endAdjustment;
+			} else if (annotationArray[j].start >= annotation.start) {
+				annotationArray[j].start += startAdjustment;
+			}
+			if (annotationArray[j].end >= annotation.end) {
+				annotationArray[j].end += endAdjustment;
+			} else if (annotationArray[j].end >= annotation.start) {
+				annotationArray[j].end += startAdjustment;
 			}
 		}
 	}
