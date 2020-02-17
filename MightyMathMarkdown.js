@@ -579,8 +579,8 @@ const operatorDictionary = {
 	"\\\'\'\'" : "&tprime;",
 
 	// Pseudo-operators that produce layout
-	"sqrt": "&radic;",
-	"root": "&radic;",
+	"sqrt": "sqrt",
+	"root": "root",
 	"overbrace": "overbrace",
 	"underbrace": "underbrace",
 
@@ -909,9 +909,9 @@ function doLayout(p) {
 	visitNodes(p, removeInvisibleOperators);
 	visitNodes(p, layoutSubscripts);
 	visitNodes(p, layoutExponents);
+	visitNodes(p, layoutRanges);
 	visitNodes(p, layoutRoots);
 	visitNodes(p, layoutFractions);
-	visitNodes(p, layoutRanges);
 	visitNodes(p, transformOperators);
 	visitNodes(p, makeOperatorsSuperscript);
 	visitNodes(p, layoutBraceComments);
@@ -1118,23 +1118,42 @@ function makeCluster(nodeArray)
 	return "";
 }
 
+function isRadical(p) {
+	if (p.type == CLUSTER && p.elements.length == 1) {
+		return isRadical(p.elements[0]);
+	}
+	if (p.operator) {
+		return p.operator == "sqrt" || p.operator == "root";
+	}
+	return false;
+}
+
+function getRadicalIndex(p) {
+	if (p.type == CLUSTER && p.elements.length == 1) {
+		return getRadicalIndex(p.elements[0]);
+	}
+	if (p.type == LIMITS) {
+		return p.lower;
+	}
+	return "";
+}
+
 function layoutRoots(p) {
 	if ((p.type == CLUSTER || p.type == ROW) && p.elements.length >= 2) {
 		let i = p.elements.length - 2;
 		while (i >= 0) {
-			if (i + 1 < p.elements.length && p.elements[i].type == OPERATOR &&
-					p.elements[i].operator == "&radic;")
-			{
-				let radical = {"type": ROOT, "radicand": null, "index": null,
-					"write": writeRoot, "children": function(){return [this.radicand, this.index]} };
-
-				radical.radicand = makeCluster(p.elements.slice(i + 1));
-
-				if (radical.radicand.type == BRACKETED) {
-					radical.radicand = radical.radicand.contents;
+			if (i + 1 < p.elements.length && isRadical(p.elements[i])) {
+				let radicand = p.elements[i + 1];
+				if (radicand.type == BRACKETED) {
+					radicand = radicand.contents;
 				}
 
-				p.elements.splice(i, p.elements.length - i, radical);
+				let index = getRadicalIndex(p.elements[i]);
+
+				let radical = {"type": ROOT, "radicand": radicand, "index": index,
+					"write": writeRoot, "children": function(){return [this.radicand, this.index]} };
+
+				p.elements.splice(i, 2, radical);
 			}
 			--i;
 		}
@@ -1220,11 +1239,7 @@ function writeLimits(nesting)
 	return result;
 }
 
-function layoutRanges(p)
-{
-	// There are three kinds of ranges: limits on a summation operator, limits on a bracketed group,
-	// and the index of a radical (not really a range).
-
+function layoutRanges(p) {
 	if (p.type == CLUSTER && p.elements.length >= 2) {
 		let i = 0;
 		while (i + 1 < p.elements.length) {
@@ -1250,7 +1265,7 @@ function layoutRanges(p)
 							"operator": p.elements[i].operator,
 							"lower": lowerLimit, "upper": upperLimit,
 							"write": writeLimits,
-							"children": function(){return [this.operator, this.lower, this.upper]} };
+							"children": function(){return [this.lower, this.upper]} };
 					p.elements.splice(i, 2, limit);
 				} else if (p.elements[i].type == LIMITS) {
 					// You can nest limits.
@@ -1260,9 +1275,6 @@ function layoutRanges(p)
 							"write": writeLimits,
 							"children": function(){return [this.nested, this.lower, this.upper]} };
 					p.elements.splice(i, 2, limit);
-				} else if (p.elements[i].type == ROOT) {
-					p.elements[i].index = p.elements[i + 1];
-					p.elements.splice(i + 1, 1);
 				} else if (p.elements[i].type == BRACKETED || p.elements[i].type == IDENTIFIER) {
 					// Ranges on a bracketed group or identifier are written like super/subscripts.
 					// This can be used as an alternative to subscript syntax for some things.
