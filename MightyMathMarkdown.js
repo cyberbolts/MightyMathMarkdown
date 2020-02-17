@@ -536,6 +536,14 @@ const identifierDictionary = {
 
 	// Non HTML 4.0
 	"\\phi": "&phiv;",
+
+	"\\P": "&primes;",
+	"\\N": "&naturals;",
+	"\\Z": "&integers;",
+	"\\Q": "&rationals;",
+	"\\R": "&reals;",
+	"\\C": "&complexes;",
+	"\\H": "&quaternions;",
 };
 
 const maxIdentifierKeyLength = 8;  // Actually only matters for the keys that start with a non-letter.
