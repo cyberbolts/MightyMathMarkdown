@@ -1493,7 +1493,7 @@ function MightyMathMarkdown() {
 
 	node = nodeIterator.nextNode();
 	while (node) {
-		let splits = node.textContent.split("###");
+		let splits = node.textContent.split("%%");
 		if (splits.length <= 1) {
 			node = nodeIterator.nextNode();
 			continue;
