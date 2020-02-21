@@ -1527,6 +1527,28 @@ function MightyMathMarkdown() {
 	nodeIterator = document.createNodeIterator(document.body, NodeFilter.SHOW_TEXT);
 
 	// TODO: Inline style
+
+	if (!hasMathMLSupport()) {
+		if (typeof MathJax === 'undefined') {
+			let script = document.createElement("script");
+			script.src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=MML_CHTML";
+			document.head.appendChild(script);
+		} else if (MathJax.typeset) {  // MathJax 3
+			MathJax.typeset();
+		} else if (MathJax.Hub.Typeset) {
+			MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
+		}
+	}
+}
+
+// From https://developer.mozilla.org/en-US/docs/Web/MathML/Authoring
+ function hasMathMLSupport() {
+  var div = document.createElement("div"), box;
+  div.innerHTML = "<math><mspace height='23px' width='77px'/></math>";
+  document.body.appendChild(div);
+  box = div.firstChild.firstChild.getBoundingClientRect();
+  document.body.removeChild(div);
+  return Math.abs(box.height - 23) <= 1  && Math.abs(box.width - 77) <= 1;
 }
 
 document.addEventListener("DOMContentLoaded", MightyMathMarkdown);
