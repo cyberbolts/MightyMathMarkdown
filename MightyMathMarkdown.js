@@ -634,10 +634,6 @@ const operatorDictionary = {
 	"not" : "&not;",
 	"¬" : "&not;",  // British keyboards have this.
 
-	"grad" : "&nabla;",
-	"div" : "&nabla;&sdot;",
-	"curl" : "&nabla;&times;",
-
 	"in" : "&isin;",
 	"!in" : "&notin;",
 	"¬in" : "&notin;",
@@ -667,6 +663,14 @@ const operatorDictionary = {
 	"+/-" : "&plusmn;",
 
 	"@" : "&part;",
+	"del" : "&part;",
+
+	"Del" : "&nabla;",
+	"grad" : "&nabla;",
+	"div" : "&nabla;&sdot;",
+	"curl" : "&nabla;&times;",
+
+	"integral" : "&int;",
 	"$" : "&int;",
 	"$$" : "&Int;",  // Not in HTML 4.0
 	"$$$" : "&iiint;",  // Not in HTML 4.0
