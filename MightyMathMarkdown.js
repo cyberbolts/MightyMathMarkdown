@@ -690,12 +690,12 @@ const operatorDictionary = {
 	"<=" : "&le;",
 	">=" : "&ge;",
 
-	":<:" : "&sub;",  // Subset
-	":>:" : "&sup;",  // Superset
-	":<=:" : "&sube;",
-	":>=:" : "&supe;",
-	":!<:" : "&nsub;",
-	":¬<:" : "&nsub;",
+	"\\<" : "&sub;",  // Subset
+	"\\>" : "&sup;",  // Superset
+	"\\<=" : "&sube;",
+	"\\>=" : "&supe;",
+	"\\!<" : "&nsub;",
+	"\\¬<" : "&nsub;",
 
 	"_|_" : "&perp;",
 
