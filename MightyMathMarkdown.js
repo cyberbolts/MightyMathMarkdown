@@ -41,6 +41,7 @@ const OVERBRACE = 14;
 const UNDERBRACE = 15;
 // TODO: VINCULUM  e.g. `AB`
 // TODO: CHEMICAL_SCRIPT  e.g. C{12} or H2SO4{3+}
+// TODO: BRA and KET
 
 function parse(s) {
 	let parseObject = {};
