@@ -705,8 +705,8 @@ const operatorDictionary = {
 	"(X)" : "&otimes;",
 	"(+)" : "&oplus;",
 
-	"->" : "&rarr;",  // This one has a shortform
 	"-->" : "&rarr;",
+	"->" : "&rarr;",  // This one has a shortform
 	"<--" : "&larr;",
 	"<-->" : "&harr;",
 
@@ -726,6 +726,14 @@ const operatorDictionary = {
 	">>" : "&rr;",
 	"<<<" : "&Ll;",
 	">>>" : "&Rr;",
+
+	"|->" : "&map;",
+	"|=" : "&models;",
+
+	"|-" : "&RightTee;",
+	"-|" : "&LeftTee;",
+	"\\T" : "&top;",
+	// "_|_" : "&bot;",  // Same as &perp;
 };
 
 const maxOperatorKeyLength = 4;  // Actually only matters for the keys that start with a non-letter.
