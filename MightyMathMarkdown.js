@@ -474,12 +474,6 @@ function parseText(p) {
 // * Those that start with a non-alphabetic character
 // * Those that are entirely alphabetic.
 const identifierDictionary = {
-	// When a letter can be an operator, prefixing it with backslash makes it an identifier again.
-	"\\X" : "X",
-	"\\v" : "v",
-	"\\V" : "V",
-	"\\o" : "o",
-
 	// HTML 4.0 entities
 	"null" : "&empty;",
 	"empty" : "&empty;",
@@ -633,12 +627,6 @@ const operatorDictionary = {
 	//
 	// The following operators are not magic.
 	//
-
-	// These operators are ASCII text strings. Are there any other ASCII words
-	// that should be treated as operators?
-	// TODO: Maybe treat ASCII strings at operators if enclosed in a pair of colons. e.g. :operator:
-	"lim" : "lim",
-	"det" : "det",
 
 	// HTML 4.0 entities
 
@@ -879,19 +867,32 @@ function parseOperator(p) {
 }
 
 function parseUnrecognized(p) {
-	// An unrecognized word or letter eventually ends up as an identifier
+	// An unrecognized ASCII word or letter
 	if (p.i < p.s.length && isAlpha(p.s[p.i])) {
-		let result = {"type": IDENTIFIER, "identifier": "", "write": writeIdentifier};
-
 		let end = p.i + 1;
 		while (end < p.s.length && isAlpha(p.s[end])) {
 			++end;
 		}
 
-		result.identifier = p.s.substring(p.i, end);
+		let word = p.s.substring(p.i, end);
 		p.i = end;
 
-		return result;
+		// Here's the heuristic:
+		//   * If it's a single letter, it's an identifier.
+		//   * If it starts with a capital letter, it's a identifer. This is mostly for the benefit of chemical elements like Ne and Ar.
+		//   * Otherwise, it's an operator. This is for trigonometric operators (sin, cos, etc), and also things like 'det'.
+		// To override this heuristic:
+		//   * An identifier can be put in single-quotes.
+		//   * TODO: A word followed by a colon will be an operator. (Not yet implemented.)
+
+		if (word.length == 1 || (word[0] >= 'A' && word[0] <= 'Z')) {
+			let result = {"type": IDENTIFIER, "identifier": word, "write": writeIdentifier};
+			return result;
+		} else {
+			let result = {"type": OPERATOR, "operator": word, "write": writeOperator};
+			return result;
+		}
+
 	}
 
 	// Any other unknown character ends up as an operator.
