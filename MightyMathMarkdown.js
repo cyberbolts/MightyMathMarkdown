@@ -343,11 +343,11 @@ function parseBracketed(p) {
 	} else if (p.expectTerm && matchString(p, '<')) {
 		p.expectBracket = ">";
 		result.left = "&lang;";
-	} else if (matchString(p, '||:')) {
-		p.expectBracket = ":||";
+	} else if (p.expectTerm && matchString(p, '||')) {
+		p.expectBracket = "||";
 		result.left = "&par;";
-	} else if (matchString(p, '|:')) {
-		p.expectBracket = ":|";
+	} else if (p.expectTerm && matchString(p, '|')) {
+		p.expectBracket = "|";
 		result.left = "&mid;";
 	}
 
@@ -371,9 +371,9 @@ function parseBracketed(p) {
 			result.right = "&rAng;";
 		} else if (matchString(p, '>')) {
 			result.right = "&rang;";
-		} else if (matchString(p, ':||')) {
+		} else if (matchString(p, '||')) {
 			result.right = "&par;";
-		} else if (matchString(p, ':|')) {
+		} else if (matchString(p, '|')) {
 			result.right = "&mid;";
 		}
 
