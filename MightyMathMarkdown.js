@@ -585,7 +585,7 @@ const operatorDictionary = {
 	"\\." : ".",    // Ditto, but can't be a decimal or thousands separator.
 	"/"   : "/",    // Fractions
 
-	":"   : ":",    // Alone or at end of cluster: Colon. Otherwise: RESERVED
+	":"   : ":",    // Alone or at end of cluster: Colon. Otherwise: invisible apply function
 	"\\:" : ":",    // Allow an escaped literal colon
 	","   : ",",    // Just a plain comma, unless it's in a number.
 	"\\," : ",",    // Ditto, but can't be interpreted as part of a number.
@@ -951,7 +951,7 @@ function removeInvisibleOperators(p) {
 	if (p.type == CLUSTER) {
 		let i = 0;
 		while (i < p.elements.length) {
-			if (p.elements[i].type == OPERATOR && p.elements[i].operator == ".") {
+			if (p.elements[i].type == OPERATOR && (p.elements[i].operator == "." || p.elements[i].operator == ":")) {
 				p.elements.splice(i, 1);
 			} else {
 				++i;
