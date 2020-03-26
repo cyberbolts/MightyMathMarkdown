@@ -244,7 +244,16 @@ function parseCluster(p) {
 			// Allow half-open intervals like [1, 3)
 			p.i -= 1;  // Rewind the ")"
 			break;
+		} else if (p.expectBracket == "``|" && matchString(p, "__|")) {
+			// For rounding notation
+			p.i -= 3;  // Rewind the "__|"
+			break;
+		} else if (p.expectBracket == "__|" && matchString(p, "``|")) {
+			// For rounding notation
+			p.i -= 3;  // Rewind the "``|"
+			break;
 		}
+
 
 		let expr;
 		if (expr = parseBracketed(p)) {
@@ -334,9 +343,12 @@ function parseBracketed(p) {
 	} else if (matchString(p, '{')) {
 		p.expectBracket = "}";
 		result.left = '{';
-	} else if (matchString(p, '|_')) {
-		p.expectBracket = "_|";
+	} else if (matchString(p, '|__')) {
+		p.expectBracket = "__|";
 		result.left = "&lfloor;";
+	} else if (matchString(p, '|``')) {
+		p.expectBracket = "``|";
+		result.left = "&lceil;";
 	} else if (p.expectTerm && matchString(p, '<<')) {
 		p.expectBracket = ">>";
 		result.left = "&lAng;";
@@ -365,8 +377,10 @@ function parseBracketed(p) {
 			result.right = ']';
 		} else if (matchString(p, '}')) {
 			result.right = '}';
-		} else if (matchString(p, '_|')) {
+		} else if (matchString(p, '__|')) {
 			result.right = "&rfloor;";
+		} else if (matchString(p, '``|')) {
+			result.right = "&rceil;";
 		} else if (matchString(p, '>>')) {
 			result.right = "&rAng;";
 		} else if (matchString(p, '>')) {
