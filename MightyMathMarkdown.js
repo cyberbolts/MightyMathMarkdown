@@ -335,7 +335,7 @@ function parseBracketed(p) {
 	let oldExpectBracket = p.expectBracket;
 
 	if (matchString(p, '(')) {
-		p.expectBracket = ")";  // TODO: Allow half-open ranges like (3, 5]
+		p.expectBracket = ")";
 		result.left = '(';
 	} else if (matchString(p, '[')) {
 		p.expectBracket = "]";
