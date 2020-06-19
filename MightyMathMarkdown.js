@@ -9,13 +9,14 @@ function toMathML(s, isDisplayStyle) {
 	lines = s.split("\n");
 	handleBraceArrows(lines);
 	removeBlankLines(lines);
-	s = lines.join(";");
 
-	if (debugMode) console.log(s);
+	let ss = lines.join(";");
 
-	let tree = parse(s);
+	if (debugMode) console.log(ss);
+
+	let tree = parse(ss);
 	doLayout(tree);
-	let result = write(tree, isDisplayStyle);
+	let result = write(tree, isDisplayStyle, s);
 
 	if (debugMode) console.log(result);
 
@@ -42,6 +43,7 @@ const UNDERBRACE = 15;
 // TODO: VINCULUM  e.g. `AB`
 // TODO: CHEMICAL_SCRIPT  e.g. C{12} or H2SO4{3+}
 // TODO: BRA and KET
+// TODO: Bold identifier
 
 function parse(s) {
 	let parseObject = {};
@@ -657,6 +659,7 @@ const operatorDictionary = {
 	"cap" : "&cap;",
 
 	"ang" : "&ang;",
+	"/_"  : "&ang;",
 
 	"therefore" : "&there4;",
 
@@ -918,16 +921,29 @@ function parseUnrecognized(p) {
 	return "";
 }
 
-function write(p, isDisplayStyle) {
+function write(p, isDisplayStyle, origSource) {
 	let result = "";
 
+	
 	if (isDisplayStyle) {
-		result += pad("<math display=block>", 0);
+		result += pad("<div class=mathcontainer title=\"" + origSource + "\">", 0);
+
+		result += pad("<math display=block>", 1);
+		result += p.write(2);
+		result += pad("</math>", 1);
+
+		result += pad("</div>", 0);  // mathcontainer
 	} else {
-		result += pad("<math display=inline>", 0);
+		result += pad("<span class=mathcontainer title=\"" + origSource + "\">", 0);
+		// GAH! I can't have double-quotes in the source if I want to include the source in the title text!
+		// What can I use as a delimiter for words in that case?
+
+		result += pad("<math display=inline>", 1);
+		result += p.write(2);
+		result += pad("</math>", 1);
+
+		result += pad("</span>", 0);  // mathcontainer
 	}
-	result += p.write(1);
-	result += pad("</math>");
 
 	return result;
 }
